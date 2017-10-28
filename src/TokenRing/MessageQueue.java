@@ -14,26 +14,33 @@ public class MessageQueue {
      * Não se esqueça que em uma fila, o primeiro elemente a entrar será o primeiro
      * a ser removido.
     */
-    ArrayList<String> queue = new ArrayList<>();
+    ArrayList<String> queue;
     
     public MessageQueue(){
-    
+        this.queue = new ArrayList<>();
     }
     
     
-    public void AddMessage(String Message){
-        /* Adicione a mensagem no final da fila. Não se esqueça de garantir que apenas uma thread faça isso 
-        por vez. */
+    // Adiciona a mensagem na fila
+    public void AddMessage(String message){
+        
+        // Adicione a mensagem no final da fila. 
+        // Não se esqueça de garantir que apenas uma thread faça isso por vez.
+        
+        this.queue.add(message);
         
     
     }
     
     public String RemoveMessage(){
-        String msg = "Bob:hello world"; /* Exemplo de mensagem armazenada na fila. */
+        String msg = "Bob:hello world";  // Exemplo de mensagem armazenada na fila.
         
-        /* Retive uma mensagem do inicio da fila. Não se esqueça de garantir que apenas uma thread faça isso 
-        por vez.  */
-        
+        // Retire uma mensagem do inicio da fila. 
+        // Não se esqueça de garantir que apenas uma thread faça isso por vez.
+
+        // Retira o primeiro elemento da lista. Lista é diminuida.
+        msg = this.queue.remove(0);
+       
         return msg;
     }
     

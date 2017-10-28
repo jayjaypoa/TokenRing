@@ -11,7 +11,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class MessageController implements Runnable{
-    private MessageQueue queue; /*Tabela de roteamento */
+    private MessageQueue queue; // Tabela de roteamento
     private InetAddress IPAddress;
     private int port;
     private Semaphore WaitForMessage;
@@ -47,8 +47,8 @@ public class MessageController implements Runnable{
      *      Se for um token, é a sua chance de enviar uma mensagem de sua fila (queue);
      *      Se for uma mensagem de dados e se for para esta estação, apenas a exiba no console, senão, 
      * envie para seu vizinho da direita;
-     *       Se for um ACK e se for para você, sua mensagem foi enviada com sucesso, passe o token para o vizinho da direita, senão, 
-     * repasse o ACK para o seu vizinho da direita.
+     *       Se for um ACK e se for para você, sua mensagem foi enviada com sucesso, passe o token para
+     * o vizinho da direita, senão, repasse o ACK para o seu vizinho da direita.
      */
     public void ReceivedMessage(String msg){
         

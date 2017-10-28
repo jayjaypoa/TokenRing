@@ -11,41 +11,27 @@ import java.util.logging.Logger;
 public class TokenRing {
 
     public static void main(String[] args) throws IOException {
-        String ip_port;
-        int port;
-        int t_token = 0;
-        boolean token = false;
-        String nickname;
-
-        /* Le arquivo de configuração. */
-        try ( BufferedReader inputFile = new BufferedReader(new FileReader("ring.cfg"))) {
-            
-            /* Lê IP e Porta */
-            ip_port = inputFile.readLine();
-            String aux[] = ip_port.split(":");
-            port = Integer.parseInt(aux[1]);
-
-            /* Lê apelido */
-            nickname = inputFile.readLine();
-                
-            /* Lê tempo de espera com o token. Usado para fins de depuração. Em caso de 
-            execução normal use valor 0. */
-            t_token = Integer.parseInt(inputFile.readLine());
-            
-            /* Lê se a estação possui o token inicial. */
-            token = Boolean.parseBoolean(inputFile.readLine());
-            
-        } catch (FileNotFoundException ex) {
-            Logger.getLogger(TokenRing.class.getName()).log(Level.SEVERE, null, ex);
-            return;
-        }
+               
+        // Obtém a configuração do arquivo
+        ConfigFile config = new ConfigFile();
+        config.importarConfiguracoes();
         
-        /* Cria uma fila de mensagens. */
+        // Cria uma fila de mensagens.
         MessageQueue queue = new MessageQueue();
+
+        // Repassa a fila e as configurações ao controlador
+        MessageController controller = new MessageController( 
+                queue,
+                config.getIp_port(),
+                config.getT_token(),
+                config.isToken(),
+                config.getNickname());
         
-        MessageController controller = new MessageController(queue, ip_port, t_token, token, nickname);
         Thread thr_controller = new Thread(controller);
-        Thread thr_receiver = new Thread(new MessageReceiver(queue, port, controller));
+        Thread thr_receiver = new Thread(new MessageReceiver(
+                queue, 
+                config.getPort(), 
+                controller));
         
         thr_controller.start();
         thr_receiver.start();
@@ -55,6 +41,8 @@ public class TokenRing {
          * MessageQueue()
          *
          */
+        String mensagem = "TESTE sTESTE TESTE";
+        queue.AddMessage(mensagem);
         
     }
     
