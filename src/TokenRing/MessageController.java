@@ -56,6 +56,18 @@ public class MessageController implements Runnable {
         
         if (msg.trim().length() > 0){
 
+            DatagramSocket clientSocket = null;
+            byte[] sendDataACK;
+            byte[] sendDataRepasse;
+
+            // Cria socket para envio de mensagem de retorno, caso necessário
+            try {
+                clientSocket = new DatagramSocket();
+            } catch (SocketException ex) {
+                Logger.getLogger(MessageController.class.getName()).log(Level.SEVERE, null, ex);
+                return;
+            }
+            
             // Verifica se a mensagem possui ponto-e-vírgula.
             // Caso haja, pode ser mensagem tipo 4066 (mensagem) ou 4067 (ACK).
             if (msg.indexOf(";") > 0){
@@ -77,14 +89,32 @@ public class MessageController implements Runnable {
                         String destino = mensagem[1].trim();
                         String conteudo = mensagem[2].trim();
                         
-                        // System.out.println("Msg recepcionada - Origem = " + origem);
-                        // System.out.println("Msg recepcionada - Destino = " + destino);
-                        // System.out.println("Msg recepcionada - Conteudo = " + conteudo);
+                        System.out.println("Msg recepcionada - Origem = " + origem);
+                        System.out.println("Msg recepcionada - Destino = " + destino);
+                        System.out.println("Msg recepcionada - Conteudo = " + conteudo);
                         
                         // Se o destinatário da mensagem for a minha máquina...
                         if (nickname.compareToIgnoreCase(destino) == 0){
                             
+                            // Envia o ACK a máquina de ORIGEM da mensagem
+                            String msgACK = "4067;" + origem;
+                            
+                            // Informa ao usuário que recebeu a mensagem
                             System.out.println("     Sou o destinatário desta mensagem!");
+                            System.out.println("     MENSAGEM RECEPCIONADA : " + conteudo);
+                            System.out.println("     Irei retornar o ACK com a seguinte mensagem : " + msgACK);
+                            
+                            // Envia o ACK pela rede a origem
+                            try {
+                                sendDataACK = msgACK.getBytes();
+                                // monta o pacote de envio
+                                DatagramPacket sendPacket = new DatagramPacket(
+                                        sendDataACK, sendDataACK.length, IPAddress, port);
+                                // envia o pacote para a rede
+                                clientSocket.send(sendPacket);
+                            } catch (IOException ex) {
+                                Logger.getLogger(MessageController.class.getName()).log(Level.SEVERE, null, ex);
+                            }
                             
                         // Se o destinatário da mensagem não for a minha máquina,
                         // repassa a mensagem adiante
@@ -92,13 +122,26 @@ public class MessageController implements Runnable {
                             
                             System.out.println("     Mensagem NÃO é para mim! Repassando a mensagem adiante...");
                             
-                        }
+                            // Repassa a mensagem para a máquina da direita
+                            try {
+                                sendDataRepasse = msg.getBytes();
+                                // monta o pacote de envio
+                                DatagramPacket sendPacket = new DatagramPacket(
+                                        sendDataRepasse, sendDataRepasse.length, IPAddress, port);
+                                // envia o pacote para a rede
+                                clientSocket.send(sendPacket);
+                            } catch (IOException ex) {
+                                Logger.getLogger(MessageController.class.getName()).log(Level.SEVERE, null, ex);
+                            }
+                            
+                        } // fim do if-else do destinatário
                         
-                    }
+                    } // fim do if da validação da mensagem (length == 3)
                     
                 // 4067 - ACK
                 } else if (comando[0].trim().compareToIgnoreCase("4067") == 0){
                     
+                    System.out.println("ACK RECEPCIONADO!");
                     System.out.println("DESTINATARIO DO ACK ====> " + comando[1]);
                     
                 }
