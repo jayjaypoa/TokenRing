@@ -107,37 +107,8 @@ public class MessageController implements Runnable {
             // mensagem do tipo 4060 (token liberado).
             } else {
 
-                
-
-                /*
-
-                // Se for o comando de envio de mensagem...
-                if (comando[0].trim().compareToIgnoreCase("4066") == 0){
-
-                    String mensagem[] = comando[1].split(":");
-
-                    // Se houver 3 campos (origem, destino e mensagem)...
-                    if (mensagem.length == 3){
-
-                        // System.out.println("Msg Posição 0 = " + mensagem[0]);
-                        // System.out.println("Msg Posição 1 = " + mensagem[1]);
-                        // System.out.println("Msg Posição 2 = " + mensagem[2]);
-
-                        // Adiciona a mensagem ao final da fila
-                        this.queue.add(message);
-
-                        // Exibe mensagem de inclusão efetuada com sucesso
-                        System.out.println("\nMensagem inserida na fila! Tamanho atual da fila : " + this.getTamanho() + " - "
-                                + "Mensagem adicionada : " + message + "\n");
-
-                    } else {
-                        System.out.println("\nERRO >> Mensagem não inserida! Formato da mensagem inválido!\n");
-                    }
-
-                } else {
-                    System.out.println("\nERRO >> Mensagem não inserida! Código inválido!\n");
-                }
-              */
+                System.out.println("Token recepcionado!");
+                token = true;
 
             } // fim do if-else que verifica a mensagem recepcionada
             
