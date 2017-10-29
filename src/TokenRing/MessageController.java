@@ -10,8 +10,9 @@ import java.util.concurrent.Semaphore;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class MessageController implements Runnable{
-    private MessageQueue queue; // Tabela de roteamento
+public class MessageController implements Runnable {
+    
+    private MessageQueue queue;     // Tabela de roteamento
     private InetAddress IPAddress;
     private int port;
     private Semaphore WaitForMessage;
@@ -19,16 +20,15 @@ public class MessageController implements Runnable{
     private int time_token;
     private Boolean token;
     
-    public MessageController(   MessageQueue q, 
-                                String ip_port, 
-                                int t_token,
-                                Boolean t,
-                                String n) throws UnknownHostException{
+    public MessageController( MessageQueue q, 
+                              String ip_port, 
+                              int t_token,
+                              Boolean t,
+                              String n) throws UnknownHostException {
         
         queue = q;
         
-        String aux[] = ip_port.split(":");
-        
+        String aux[] = ip_port.split(":");        
         IPAddress = InetAddress.getByName(aux[0]);
         port = Integer.parseInt(aux[1]);
         
@@ -54,7 +54,7 @@ public class MessageController implements Runnable{
         
          System.out.println("TOKEN RECEIVED: " + msg);
         
-         /* Libera a thread para execução. */
+         // Libera a thread para execução.
          WaitForMessage.release();
     }
     
