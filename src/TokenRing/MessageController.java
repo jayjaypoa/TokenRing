@@ -93,6 +93,7 @@ public class MessageController implements Runnable {
                         System.out.println("Msg recepcionada - Destino = " + destino);
                         System.out.println("Msg recepcionada - Conteudo = " + conteudo);
                         
+                        
                         // Se o destinatário da mensagem for a minha máquina...
                         if (nickname.compareToIgnoreCase(destino) == 0){
                             
