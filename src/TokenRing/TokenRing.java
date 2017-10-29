@@ -1,16 +1,22 @@
 package TokenRing;
 
+import TokenRing.GUI.FrmFila;
+import java.awt.Dimension;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.JFrame;
+import javax.swing.SwingUtilities;
+import javax.swing.WindowConstants;
 
 public class TokenRing {
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException {
                
         System.out.println("INICIANDO APLICAÇÃO...\n");
         
@@ -46,35 +52,19 @@ public class TokenRing {
         Thread thr_controller = new Thread(controller);
         Thread thr_receiver = new Thread(
             new MessageReceiver ( queue, 
-                                  config.getPort(), 
+                                  config.getPort(),
                                   controller ));
         
         // Inicializa as threads
         thr_controller.start();
         thr_receiver.start();
         
-        /* Neste ponto, a thread principal deve ficar aguarando o usuário entrar com o destinatário
-         * e a mensagem a ser enviada. Destinatário e mensagem devem ser adicionados na fila de mensagens pendentes.
-         * MessageQueue()
-         *
-         */        
-        System.out.println("# INFORME MANSAGEM A SER RETRANSMITIDA (FORMATO ==> 4066;Origem:Destino:Mensagem a ser transmitida) : ");
-        
-        queue.AddMessage("MENSAGEM 1");
-        queue.AddMessage("MENSAGEM 2");
-        queue.AddMessage("MENSAGEM 3");
-        queue.AddMessage("MENSAGEM 4");
-        queue.AddMessage("MENSAGEM 5");
-        
-        String msg = queue.RemoveMessage();
-        System.out.println("MENSAGEM -> " + msg + " - Fila com " + queue.getTamanho() + " posições ocupadas.");
-        
-        msg = queue.RemoveMessage();
-        System.out.println("MENSAGEM -> " + msg + " - Fila com " + queue.getTamanho() + " posições ocupadas.");
-        
-        msg = queue.RemoveMessage();
-        System.out.println("MENSAGEM -> " + msg + " - Fila com " + queue.getTamanho() + " posições ocupadas.");
-        
+        // Cria Frame para inserção de mensagens
+        JFrame frmMensagens = new FrmFila(config.getNickname(), queue);
+        frmMensagens.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        frmMensagens.pack();
+        frmMensagens.setVisible(true);
+       
     }
     
 }
