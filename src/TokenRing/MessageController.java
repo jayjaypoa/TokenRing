@@ -332,8 +332,16 @@ public class MessageController implements Runnable {
 
                         // Caso NÃO possua mensagens a serem enviadas...
                         } else {
-                            bloquear = false; // não bloqueia a thread, pois não enviou mensagem para a rede
+                            
+                            // não bloqueia a thread, pois não enviou mensagem para a rede
+                            bloquear = false; 
+                            
+                            // Informa ao usuário que não possui mensagens na fila
                             System.out.println("Não possui mensagens na fila de envio!");    
+                            
+                            // libera o token para o próximo
+                            enviaMensagem("4060");
+                            
                         }
 
                     } // fim do if do enviouMensagem == false
