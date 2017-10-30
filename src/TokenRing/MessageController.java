@@ -7,6 +7,7 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -19,6 +20,8 @@ public class MessageController implements Runnable {
     private String nickname;
     private int time_token;
     private Boolean token;
+    private Boolean msgEnviadaComSucesso;
+    private Boolean enviouMensagem;
     
     public MessageController( MessageQueue q, 
                               String ip_port, 
@@ -40,6 +43,10 @@ public class MessageController implements Runnable {
         
         WaitForMessage = new Semaphore(0);
         
+        this.msgEnviadaComSucesso = false;
+        
+        this.enviouMensagem = false;
+        
     }
     
     /** ReceiveMessage()
@@ -56,18 +63,6 @@ public class MessageController implements Runnable {
         
         if (msg.trim().length() > 0){
 
-            DatagramSocket clientSocket = null;
-            byte[] sendDataACK;
-            byte[] sendDataRepasse;
-
-            // Cria socket para envio de mensagem de retorno, caso necessário
-            try {
-                clientSocket = new DatagramSocket();
-            } catch (SocketException ex) {
-                Logger.getLogger(MessageController.class.getName()).log(Level.SEVERE, null, ex);
-                return;
-            }
-            
             // Verifica se a mensagem possui ponto-e-vírgula.
             // Caso haja, pode ser mensagem tipo 4066 (mensagem) ou 4067 (ACK).
             if (msg.indexOf(";") > 0){
@@ -89,10 +84,9 @@ public class MessageController implements Runnable {
                         String destino = mensagem[1].trim();
                         String conteudo = mensagem[2].trim();
                         
-                        System.out.println("Msg recepcionada - Origem = " + origem);
-                        System.out.println("Msg recepcionada - Destino = " + destino);
-                        System.out.println("Msg recepcionada - Conteudo = " + conteudo);
-                        
+                        // System.out.println("Msg recepcionada - Origem = " + origem);
+                        // System.out.println("Msg recepcionada - Destino = " + destino);
+                        // System.out.println("Msg recepcionada - Conteudo = " + conteudo);
                         
                         // Se o destinatário da mensagem for a minha máquina...
                         if (nickname.compareToIgnoreCase(destino) == 0){
@@ -105,35 +99,18 @@ public class MessageController implements Runnable {
                             System.out.println("     MENSAGEM RECEPCIONADA : " + conteudo);
                             System.out.println("     Irei retornar o ACK com a seguinte mensagem : " + msgACK);
                             
-                            // Envia o ACK pela rede a origem
-                            try {
-                                sendDataACK = msgACK.getBytes();
-                                // monta o pacote de envio
-                                DatagramPacket sendPacket = new DatagramPacket(
-                                        sendDataACK, sendDataACK.length, IPAddress, port);
-                                // envia o pacote para a rede
-                                clientSocket.send(sendPacket);
-                            } catch (IOException ex) {
-                                Logger.getLogger(MessageController.class.getName()).log(Level.SEVERE, null, ex);
-                            }
-                            
+                            // Envia o ACK para a máquina de origem
+                            this.enviaMensagem(msgACK);
+                                                        
                         // Se o destinatário da mensagem não for a minha máquina,
                         // repassa a mensagem adiante
                         } else {
                             
+                            // Informa o usuário que vai repassar a mensagem
                             System.out.println("     Mensagem NÃO é para mim! Repassando a mensagem adiante...");
                             
                             // Repassa a mensagem para a máquina da direita
-                            try {
-                                sendDataRepasse = msg.getBytes();
-                                // monta o pacote de envio
-                                DatagramPacket sendPacket = new DatagramPacket(
-                                        sendDataRepasse, sendDataRepasse.length, IPAddress, port);
-                                // envia o pacote para a rede
-                                clientSocket.send(sendPacket);
-                            } catch (IOException ex) {
-                                Logger.getLogger(MessageController.class.getName()).log(Level.SEVERE, null, ex);
-                            }
+                            this.enviaMensagem(msg);
                             
                         } // fim do if-else do destinatário
                         
@@ -142,21 +119,62 @@ public class MessageController implements Runnable {
                 // 4067 - ACK
                 } else if (comando[0].trim().compareToIgnoreCase("4067") == 0){
                     
-                    System.out.println("ACK RECEPCIONADO!");
-                    System.out.println("DESTINATARIO DO ACK ====> " + comando[1]);
+                    // Se o destinatário da ACK for a minha máquina...
+                    if (nickname.compareToIgnoreCase(comando[1].trim()) == 0){
+                    
+                        // Marca a flag indicando que recepcionou o retorno 
+                        // da mensagem enviada com sucesso.
+                        this.msgEnviadaComSucesso = true;
+                        
+                        // Informa o usuário que obteve o ACK e que irá repassar o TOKEN
+                        System.out.println("     ACK recepcionado com sucesso!");
+                        System.out.println("     Irei repassar o TOKEN...");
+                        
+                        // Repassa o Token para a máquina da direita
+                        this.token = false;
+                        this.enviaMensagem("4060");
+                        
+                    // Se o destinatário da ACK não for a minha máquina...
+                    } else {
+                        
+                        // Informa o usuário que vai repassar a mensagem
+                        System.out.println("     Mensagem NÃO é para mim! Repassando a mensagem adiante...");
+                        
+                        // Apenas repassa a mensagem original 
+                        // para a máquina da direita
+                        this.enviaMensagem(msg);
+                        
+                    }
                     
                 }
                 
             // Se não possuir ponto-e-vírgula, pode ser apenas 
             // mensagem do tipo 4060 (token liberado).
             } else {
-
-                System.out.println("Token recepcionado!");
+                
+                // Recepciona o token              
                 token = true;
+                
+                // Informa ao usuário que recebeu o token
+                System.out.println("Token recepcionado!");
 
+                // Redefine os controladores
+                this.enviouMensagem = false;
+                this.msgEnviadaComSucesso = true;
+                
             } // fim do if-else que verifica a mensagem recepcionada
             
         } // fim do if que verifica o tamanho da mensagem recepcionada
+        
+        try {
+
+            // Espera time_token segundos para o envio do token. 
+            // Isso é apenas para depuração, durante execução real faça time_token = 0
+            Thread.sleep(time_token*1000);
+
+        } catch (InterruptedException ex) {
+            Logger.getLogger(MessageController.class.getName()).log(Level.SEVERE, null, ex);
+        }
         
         // Libera a thread para execução.
         WaitForMessage.release();
@@ -166,6 +184,8 @@ public class MessageController implements Runnable {
     @Override
     public void run() {
         
+        String ultimaMensagem = "";
+        int nroTentativaEnvio = 0;        
         boolean bloquear = true;
         
         DatagramSocket clientSocket = null;
@@ -196,60 +216,194 @@ public class MessageController implements Runnable {
             // Possui o TOKEN ativado...
             if(token == true){
                 
-                // Verifica se possui alguma mensagem na fila de envio
-                if (queue.getTamanho() > 0) {  // Possui mensagem a ser enviada...
+                // Se a mensagem foi enviada e se o ReceivedMessage() ainda não recebeu a ACK,
+                // gera uma nova tentativa de envio.
+                if (this.enviouMensagem == true && this.msgEnviadaComSucesso == false){
+                    nroTentativaEnvio++;
+                }
+                
+                // Se a mensagem foi recepcionada pelo fluxo correto, zera os contadores. 
+                // Fluxo correto é passando pelo ReceivedMessage().
+                if (this.msgEnviadaComSucesso == true){                    
+                    // zera o contador de tentativas de envio
+                    nroTentativaEnvio = 0;
+                }
+                
+                // System.out.println("nroTentativaEnvio ------> " + nroTentativaEnvio);
+                
+                if (nroTentativaEnvio <= 3 
+                        && this.enviouMensagem == true
+                        && this.msgEnviadaComSucesso == false){
+                
+                    // Informa ao usuário que nova tentativa de envio está sendo efetuada
+                    System.out.println("Tentativa de envio " + nroTentativaEnvio);
+                    System.out.println("Reenviando a mesma mensagem : " + ultimaMensagem);
                     
+                    // reenvia a mesma mensagem
                     bloquear = false;
-                    
-                    // Informa que há mensagens na fila
-                    System.out.println("Possui mensagens na fila de envio! Quantidade de itens na fila: " + queue.getTamanho());
-                    
-                    // Obtém a primeira mensagem da fila
-                    String item = queue.RemoveMessage();
-                    System.out.println("Enviando primeira mensagem da fila: " + item);
                     
                     // Envia a mensagem (primeira da fila) para a máquina da direita
                     try {
-                        
-                        sendData = item.getBytes();
-                        
+
+                        // repassa a mesma mensagem
+                        sendData = ultimaMensagem.getBytes();
+
                         // monta o pacote de envio
                         DatagramPacket sendPacket = new DatagramPacket(
                                 sendData, sendData.length, IPAddress, port);         
-                        
+
                         // envia o pacote para a rede
                         clientSocket.send(sendPacket);
-                        
+
                         // Bloqueia a thread, visto que uma mensagem
                         // foi disparada na rede e é necessário aguardar
                         // o retorno deste envio.
                         bloquear = true;
-                        
+
                     } catch (IOException ex) {
                         bloquear = false; // não bloqueia a thread, visto que deu erro no envio da mensagem
                         Logger.getLogger(MessageController.class.getName()).log(Level.SEVERE, null, ex);
                     } 
                     
-                // Caso NÃO possua mensagens a serem enviadas...
+                // Se já passou a quantidade de tentativa de envios,
+                // informa ao usuário que a mensagem se perdeu e 
+                // libera o TOKEN ao vizinho da direita.
+                } else if (nroTentativaEnvio > 3 
+                        && this.enviouMensagem == true
+                        && this.msgEnviadaComSucesso == false){
+                    
+                    // redefine os controladores
+                    nroTentativaEnvio = 0;
+                    this.enviouMensagem = false;
+                    this.msgEnviadaComSucesso = true;
+                    
+                    // Informa ao usuário que a mensagem se perdeu
+                    // e que o TOKEN foi repassado a máquina da direita.
+                    System.out.println("Mensagem se perdeu! Irei repassar o TOKEN...");
+                        
+                    // Repassa o Token para a máquina da direita
+                    this.token = false;
+                    this.enviaMensagem("4060");
+                    
+                // ENVIA A MENSAGEM PELA PRIMEIRA VEZ
                 } else {
-                    bloquear = false; // não bloqueia a thread, pois não enviou mensagem para a rede
-                    System.out.println("Não possui mensagens na fila de envio!");    
-                }
+                
+                    // ENVIA A MENSAGEM PELA PRIMEIRA VEZ
+                    if (this.enviouMensagem == false){
+
+                        // Verifica se possui alguma mensagem na fila de envio
+                        if (queue.getTamanho() > 0) {  // Possui mensagem a ser enviada...
+
+                            bloquear = false;
+
+                            // Informa que há mensagens na fila
+                            System.out.println("Possui mensagens na fila de envio! Quantidade de itens na fila: " + queue.getTamanho());
+
+                            // Obtém a primeira mensagem da fila
+                            String item = queue.RemoveMessage();
+                            ultimaMensagem = item;
+                            System.out.println("Enviando primeira mensagem da fila: " + item);
+
+                            // Incrementa contador de controle de envio
+                            nroTentativaEnvio++;
+                            System.out.println("Tentativa de envio " + nroTentativaEnvio);
+
+                            // Envia a mensagem (primeira da fila) para a máquina da direita
+                            try {
+
+                                sendData = item.getBytes();
+
+                                // monta o pacote de envio
+                                DatagramPacket sendPacket = new DatagramPacket(
+                                        sendData, sendData.length, IPAddress, port);         
+
+                                // envia o pacote para a rede
+                                clientSocket.send(sendPacket);
+
+                                // Bloqueia a thread, visto que uma mensagem
+                                // foi disparada na rede e é necessário aguardar
+                                // o retorno deste envio.
+                                bloquear = true;
+
+                            } catch (IOException ex) {
+                                bloquear = false; // não bloqueia a thread, visto que deu erro no envio da mensagem
+                                Logger.getLogger(MessageController.class.getName()).log(Level.SEVERE, null, ex);
+                            } 
+
+                        // Caso NÃO possua mensagens a serem enviadas...
+                        } else {
+                            bloquear = false; // não bloqueia a thread, pois não enviou mensagem para a rede
+                            System.out.println("Não possui mensagens na fila de envio!");    
+                        }
+
+                    } // fim do if do enviouMensagem == false
+                
+                } // fim do if-else do reenvio da mensagem
+                
   
             } // fim do if do token ativado...
             
             // Se houve um disparo de mensagem,
             // a estação fica aguardando a ação gerada pela função ReceivedMessage().
             if (bloquear){
-                try {
-                    WaitForMessage.acquire();
+                try {                  
+                    
+                    // Marca que enviou uma mensagem
+                    this.enviouMensagem = true;
+                    
+                    // Deixa a flag de recebimento em false.
+                    // Se passar pelo método de recebimento de retorno,
+                    // altera esta flag para true.
+                    this.msgEnviadaComSucesso = false;
+                    
+                    // Solicita a pausa da thread por 3 segundos.
+                    // Este é o tempo que devemos esperar pelo ACK
+                    WaitForMessage.tryAcquire(3, TimeUnit.SECONDS);
+                    
+                    // WaitForMessage.acquire(); 
+                    
                 } catch (InterruptedException ex) {
                     Logger.getLogger(MessageController.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
             
+           
+            
             System.out.print("\n");
             
         } //fim do while true
     }
+    
+    private void enviaMensagem(String mensagem){
+        
+        DatagramSocket clientSocket = null;
+        byte[] sendData = null;
+        
+        // Cria socket para envio de mensagem de retorno, caso necessário
+        try {
+            clientSocket = new DatagramSocket();
+        } catch (SocketException ex) {
+            Logger.getLogger(MessageController.class.getName()).log(Level.SEVERE, null, ex);
+            return;
+        }
+        
+        // Envia o ACK pela rede a origem
+        try {
+            
+            sendData = mensagem.getBytes();
+            
+            // monta o pacote de envio
+            DatagramPacket sendPacket = new DatagramPacket(
+                    sendData, sendData.length, IPAddress, port);
+            
+            // envia o pacote para a rede
+            clientSocket.send(sendPacket);
+            
+        } catch (IOException ex) {
+            Logger.getLogger(MessageController.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+    }
+    
+    
 }
