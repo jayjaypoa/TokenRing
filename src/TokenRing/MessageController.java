@@ -101,7 +101,18 @@ public class MessageController implements Runnable {
                             
                             // Envia o ACK para a máquina de origem
                             this.enviaMensagem(msgACK);
-                                                        
+                            
+                        // Se a máquina de destino não existir na rede...
+                        } else if (nickname.compareToIgnoreCase(destino) == 0){                                
+                            
+                            // Informa ao usuário que vai liberar o token
+                            System.out.println("     Destinatário da mensagem não localizado nesta rede!");
+                            System.out.println("     TOKEN será liberado...!");
+                            
+                            // libera o token
+                            this.token = false;
+                            this.enviaMensagem("4060");
+                            
                         // Se o destinatário da mensagem não for a minha máquina,
                         // repassa a mensagem adiante
                         } else {
@@ -340,6 +351,7 @@ public class MessageController implements Runnable {
                             System.out.println("Não possui mensagens na fila de envio!");    
                             
                             // libera o token para o próximo
+                            this.token = false;
                             enviaMensagem("4060");
                             
                         }
